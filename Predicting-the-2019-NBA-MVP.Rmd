@@ -187,6 +187,7 @@ The following plot provides an initial idea of the results obtained, with the pu
 library(caret)
 library(randomForest)
 
+# removing variables that will not be used in the model
 combi_reg <- combi2[, -c(15,16,18,19,27)]
 
 dummies <- dummyVars(~., combi_reg[, -22])
@@ -238,9 +239,9 @@ library(plotly)
 test_reg_fin$Player <- factor(as.character(test_reg_fin$Player), levels = as.character(test_reg_fin$Player)[order(test_reg_fin$Points_Won, decreasing = T)])
 test_reg_fin <- test_reg_fin[order(test_reg_fin$Points_Won, decreasing = T),]
 
-test_reg_fin_facce <- test_reg_fin[1:5,]
+test_reg_fin_faces <- test_reg_fin[1:5,]
 
-plot_ly(test_reg_fin_facce, x = ~Points_Won, y = ~Player, type = 'scatter', marker = list(size = 15),
+plot_ly(test_reg_fin_faces, x = ~Points_Won, y = ~Player, type = 'scatter', marker = list(size = 15),
         hoverlabel = list(font = list(size = 13)), hoverinfo = "x",
         text = ~paste("Previsione punteggio:", Points_Won)) %>%
   layout(title = "Prediction of Voting Results",
@@ -289,7 +290,7 @@ library(DT)
 test_tab <- test_reg_fin[-c(19:22), -c(2,3,5,8,9,10,14,15,16,17,18,19,20,21,22,23,24,29,30)]
 test_tab$Age <- NULL
 
-col_names <- c('Win %' = 2, 'Games %' = 3, 'Points' = 4, 'Rebounds' = 5, 'Assists' = 6, 'TS%' = 7,'WS/48' = 9, 'Predicted Score' = 11)
+col_names <- c('Win %' = 2, 'Games %' = 3, 'Points' = 4, 'Rebounds' = 5, 'Assists' = 6, 'TS%' = 7, 'WS/48' = 9, 'Predicted Score' = 11)
 
 datatable(test_tab, class = "cell-border nowrap stripe", rownames = F, colnames = col_names, escape = T, fillContainer = F, options = list(pageLength = 10, autowidth = F, columnDefs = list(list(className = 'dt-center', targets = '_all')))) %>% 
   formatStyle(columns = c("Player", "Predicted Score"), fontWeight = 'bold')
