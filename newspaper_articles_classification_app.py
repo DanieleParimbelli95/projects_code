@@ -2,8 +2,8 @@ import streamlit as st
 
 st.title('Classification of Newspaper Web Articles')
 
-markdown = "*Created by* [*Daniele Parimbelli*](https://danieleparimbelli95.github.io/)"
-st.markdown(markdown)
+author = "*Created by* [*Daniele Parimbelli*](https://danieleparimbelli95.github.io/)"
+st.markdown(author)
 
 st.subheader('How Was this App Made?')
 
@@ -43,15 +43,11 @@ if url != '':
         sys.tracebacklimit = 0
 
         html = urlopen(url).read()
-    
         soup = BeautifulSoup(html, features = "html.parser")
         
         title_newspaper = soup.find('title').text
-        
         title_list = list(title_newspaper.partition(" - "))
-        
         title_list_sorted = sorted(title_list, key = len)
-        
         title = title_list_sorted[2]
             
         description = soup.find('meta', attrs = {'name': 'description'})
@@ -70,7 +66,6 @@ if url != '':
                 paragraphs_all = paragraphs_all + paragraphs[x].text + ". "
                   
         allthecontent = ""
-        
         allthecontent = str(title) + ". " + str(description) + " " + str(paragraphs_all) 
         allthecontent = str(allthecontent)
         
