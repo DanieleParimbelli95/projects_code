@@ -1,0 +1,333 @@
+---
+title: "**Predicting the 2019 NBA MVP**"
+author: "Daniele Parimbelli"
+output:
+  html_document:
+    theme: spacelab
+    toc: true
+    toc_float: true
+---
+
+<style>
+h1.title{
+    text-align: center;
+}
+</style>
+
+
+<style>
+.author {
+    font-family: Brush Script MT;
+    font-size: 22px;
+    text-align: center;
+}
+</style>
+
+
+<style>
+h2 {
+    font-size: 24px;
+}
+</style>
+
+
+<style>
+body {
+  text-align: justify;
+  font-size: 15.19px;
+}
+</style>
+
+
+<style>
+.html-widget {
+    margin: auto;
+}
+</style>
+
+
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>
+
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The National Basketball Association (NBA) is the premier basketball league in the world, consisting of 30 teams (29 based in the USA and one in Canada) divided into two conferences of 15 teams each. Every year (season) is split into two phases:
+
+* the regular season, when each team plays 82 games;
+* the playoffs, when only the top 8 teams for each conference compete for the NBA championship title.
+
+At the end of each season, following a vote conducted among more than 100 media members, various awards are conferred. Among these, the most coveted is undoubtedly the MVP (Most Valuable Player), which is awarded to the best player of the regular season.
+
+The goal of this project is to create a model capable of predicting, by analyzing player stats, the MVP of the 2018-19 NBA season. Since the season is still in progress, the results will necessarily be partial. This project can therefore be interpreted as a prediction of who would win the MVP award if the season had ended on January 12, 2019. 
+
+Over the years, much has been said about the criteria that should be used in determining the MVP (for example, how much team results or number of games played should count). Therefore, another reason that prompted me to carry out this analysis was to analyze past ballots to determine which variables were the most considered by voters before casting their preferences.
+
+Specifically, voting takes place as follows: each voter casts a vote for 1st to 5th place selections. First-place votes are worth 10 points, second-place votes 7, third-place votes 5, fourth-place votes 3 and fifth-place votes are worth 1 point. The player who gets the highest score is elected MVP of the regular season.
+
+The data were downloaded from [Basketball Reference](https://www.basketball-reference.com/), with the aim of obtaining a dataset composed of the stats referring to the best individual seasons by NBA players during the years. The initial idea was to consider the 1980-81 season as the first one in the dataset, because it is from that year that the MVP has been awarded by media members (previously the winner was selected by the players); but later it was decided to carry out the analysis starting from the following season (1981-82), since not all the stats were available for the previous year.
+
+
+
+## Exploratory Analysis
+
+A regression model was used to predict the total score each player will get in the vote. But before describing the results obtained, the most interesting plots are shown.
+
+The first one highlights something that is probably obvious to anyone who follows the NBA, but might be surprising to everyone else. It is clear from the following boxplots that those who have been awarded the MVP turn out to be above average in two stats that are certainly not positive: missed shots per game and turnovers per game.
+
+The explanation is actually very simple: being the main players of their team, the MVPs are usually the players who attempt the most field goals during the game; it is therefore normal that they are also the ones who miss the most shots (plot on the left).
+
+As for turnovers, the reason lies in the fact that MVPs handle the ball much more than their teammates and it is not surprising that they are the team leaders in this stat as well.
+
+It is thus clear that even the "negative" variables can be useful in predicting whether a player will be elected MVP at the end of the season.
+
+
+```{r, include = FALSE, warning = FALSE, message = FALSE}
+train <- read.csv(".../train.csv", header = T, sep = ";", dec = ".")
+test <- read.csv(".../test.csv", header = T, sep = ";", dec = ".")
+
+combi <- rbind(train, test)
+
+combi$Player <- as.character(combi$Player)
+combi$MVP <- as.factor(combi$MVP)
+levels(combi$MVP) <- c("No MVP", "MVP")
+combi$Player_Ranking <- as.factor(combi$Player_Ranking)
+
+combi2 <- combi[, -c("Player", "Team", "Games_Started_Percentage")]
+
+library(plotly)
+attach(train)
+Missed <- Field_Goals_Attempted_per_Game - Field_Goals_Made_per_Game
+```
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 9.5, fig.height = 5.5}
+box1 <- plot_ly(x = MVP, y = ~Missed, type = "box", color = ~MVP, colors = c("skyblue","gold2"), hoverinfo = "text", hoverlabel = list(font = list(size = 13)), text = ~paste("Player:", Player, "<br>Season:", Season, "<br>FG Missed per Game:", Missed), showlegend = F) %>%
+  layout(xaxis = list(tickfont = list(size = 15), fixedrange = T), yaxis = list(title = "FG Missed per Game", tickfont = list(size = 13), titlefont = list(size = 16)))
+
+box2 <- plot_ly(x = MVP, y = ~Turnovers_per_Game, type = "box", color = ~MVP, colors = c("skyblue","gold2"), hoverinfo = "text", hoverlabel = list(font = list(size = 13)), text = ~paste("Player:", Player, "<br>Season:", Season, "<br>Turnovers per Game:", Turnovers_per_Game), showlegend = F) %>%
+  layout(xaxis = list(tickfont = list(size = 15), fixedrange = T), yaxis = list(title = "Turnovers", tickfont = list(size = 13), titlefont = list(size = 16)))
+
+( sub_box <- subplot(box1, box2, shareY = F, titleY = T) %>%
+    layout(title = "") %>% config(displayModeBar = F) )
+```
+
+
+<br>
+The following boxplot is animated and allows to understand that advanced stats are increasingly considered in the evaluation of a player (the term "advanced" refers to those statistics created ad hoc to evaluate the efficiency of a single player or his contribution to the success of the team). This plot refers to BPM (Box Plus/Minus), but also for WS/48 (Win shares for 48 minutes) and PER (Player Efficiency Rating) the results are similar.
+
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 9, fig.height = 6}
+( box_anim_1 <- train %>% 
+    plot_ly(x = MVP, y = ~BPM, type = "box", color = ~MVP, colors = c("skyblue", "gold2"), frame = ~Decade, hoverinfo = "text", hoverlabel = list(font = list(size = 13)), text = ~paste("Player:", Player, "<br>Season:", Season, "<br>BPM:", BPM), showlegend = F) %>%
+    animation_opts(frame = 2000) %>%
+    animation_slider(currentvalue = list(prefix = "Decade: ", font = list(color="black")), font = list(size = 13)) %>%
+    layout(yaxis = list(zeroline = F, tickfont = list(size = 12), titlefont = list(size = 17)), xaxis = list(tickfont = list(size = 15), fixedrange = T))
+  %>% config(displayModeBar = F)
+)
+```
+
+What stands out is the extreme relevance that this stat seems to have in the classification of MVPs, especially in recent years; the reason probably lies in the fact that these stats are quite new (the values for the previous years were calculated later) and therefore, even if they had wanted to, in the past the voters could not have consulted them before casting their ballot.
+
+
+Looking at the various plots also allows to get an idea about the explanatory variables that might be the most important in predicting the target variable, which is called *MVP Share* and is the ratio between the total points obtained by a player in the voting and the highest achievable score.
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 9, fig.height = 6}
+library(plotly)
+attach(train)
+
+scatter <- plot_ly(y = MVP_Share, x = Points_per_Game, type = "scatter", mode = "markers", visible = T, color = ~MVP, colors = c("skyblue", "gold2"), marker = list(size = 9, line = list(color = "black", width = 0.5)), hoverinfo = "text", hoverlabel = list(font = list(size = 13)), text = ~paste("Player:", Player, "<br>Season:", Season, "<br>Points per Game:", Points_per_Game, "<br> MVP Share", MVP_Share)) %>%
+  add_markers(y = MVP_Share, x = Games_Played_Percentage, type = "scatter", mode = "markers", visible = F, color = ~MVP, colors = c("skyblue", "gold2"), marker = list(size = 9,line = list(color = "black", width = 0.5)), hoverinfo = "text", hoverlabel = list(font = list(size = 13)), text = ~paste("Player:", Player, "<br>Season:", Season, "<br>Games Played %:", Games_Played_Percentage * 100, "<br>MVP Share", MVP_Share)) %>%
+  add_markers(y = MVP_Share, x = Team_Win_Percentage, type = "scatter", mode = "markers", visible = F, color = ~MVP, colors = c("skyblue", "gold2"), marker = list(size = 9, line = list(color = "black", width = 0.5)), hoverinfo =" text", hoverlabel = list(font = list(size = 13)), text = ~paste("Player:", Player, "<br>Season:", Season, "<br>Team Win %:", Team_Win_Percentage, "<br>MVP Share", MVP_Share)) %>%
+  config(displayModeBar = F)
+
+
+( scatter <- scatter %>%
+    layout(title = "", xaxis = list(side = "top", tickfont = list(size = 13)), yaxis = list(zeroline = F, title = "MVP Share", titlefont = list(size = 16), tickfont = list(size = 12)),
+  legend = list(y = 0.5, font = list(size = 15), traceorder = "reversed"), updatemenus = list(
+    list(type = "buttons", direction = "left", x = 0.7, y = 0,
+         buttons = list(
+           list(method = "restyle",  
+                args = list("visible", c(T, T, F, F, F, F)),  
+                label = "Points"),
+           list(method = "restyle",
+                args = list("visible", c(F, F, T, T, F, F)), 
+                label = "Games Played %"),
+           list(method = "restyle",
+                args = list("visible", c(F, F, F, F, T, T)),
+                label = "Team Win %")
+         ))
+  )) 
+)
+
+```
+
+The first thing that stands out here is that there seems to be a correlation between the points scored and the target; it can be seen from the plot that the only player to have won the MVP having scored less than 20 points per game was Steve Nash, twice (however, his number of assists was very high).
+
+As for the number of games played, it is clear that players who miss many games are penalized: in fact, no one has ever been elected MVP having played less than 85% of the games (it is worth remembering that the years prior to the 1981-82 season were not considered).
+
+There also seems to be a strong correlation between the team winning percentage and the number of votes received: in the years considered, only Russell Westbrook in 2017 and Moses Malone in 1982 have won the MVP award having played for a team which won less than 60% of the games played.
+
+<br>
+The following animated scatterplot shows that in recent years superstars have been playing fewer minutes than in the past, due to an increasing attention paid to the physical well-being of players. This may also be the reason why the number of minutes played per game is not particularly correlated with the target variable.
+
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 9, fig.height = 6}
+
+( scatter_anim_1 <- train %>% 
+    plot_ly(y = MVP_Share, x = Minutes_Played_per_Game, type = "scatter", color = ~MVP, colors = c("skyblue", "gold2"), frame = ~Decade, hoverinfo = "text", text = ~paste("Player:", Player, "<br>Season:", Season, "<br>Minutes per Game", Minutes_Played_per_Game), marker = list(size = 9, line = list(color = "black", width = 0.5)), hoverlabel = list(font = list(size = 13))) %>%
+    animation_opts(frame = 2000, transition = 1000) %>%
+    animation_slider(currentvalue = list(prefix = "Decade: ", font = list(color = "black")), font = list(size = 13)) %>%
+    layout(yaxis = list(title = "MVP Share", zeroline = F, tickfont = list(size = 12), titlefont = list(size = 16)), xaxis = list(title =" Minutes per Game", titlefont = list(size = 14), tickfont = list(size = 12)), legend = list(y = 0.5, font = list(size = 15))) 
+) %>%
+  config(displayModeBar = F)
+
+```
+
+<br>
+
+## Results
+
+The variable importance estimation for the final model produced very reasonable results: respectively, PER, team win percentage, BPM, WS/48, percentage of games played and points per game were the most useful variables in the prediction. In this case, the main thing to point out is how much two variables that do not concern the individual performance of players are considered by voters: team results and number of games played. Furthermore, once again advanced stats (PER, WS/48, BPM) prove to be more useful than “traditional” ones (points, rebounds, assists).
+
+
+<br>
+The following plot provides an initial idea of the results obtained, with the purpose of showing, at the time of the analysis, the gaps between the predicted first five voting leaders. 
+
+**N.B.** Due to space problems, Giannis Antetokounmpo is indicated, unlike the other players, with the first name.   
+<br>
+
+
+
+```{r, include = FALSE, warning = FALSE, message = FALSE}
+library(caret)
+library(randomForest)
+
+combi_reg <- combi2[, -c(15,16,18,19,27)]
+
+dummies <- dummyVars(~., combi_reg[, -22])
+combi.with.dummies <- data.frame(predict(dummies, combi_reg[, -22]))
+combi.with.dummies <- cbind(combi.with.dummies, MVP_Share = combi_reg[, 22])
+
+train_reg <- combi.with.dummies[1 : nrow(train),]
+
+test_reg <- combi.with.dummies[(nrow(train) + 1) : (nrow(train) + nrow(test)),]  
+
+
+ctrl_reg_xgb <- trainControl(method = "repeatedcv", number = 10, repeats = 2)
+
+# result of hyperparameter tuning
+my_grid_reg_xgb <- expand.grid(nrounds = 400, eta = 0.02, max_depth = 4, gamma = 0,
+                               min_child_weight = 4, subsample = 0.9, colsample_bytree = 0.8)
+
+fit_reg_xgb <- train(MVP_Share ~ ., 
+                 train_reg,
+                 method = "xgbTree",
+                 trControl = ctrl_reg_xgb,
+                 metric = "RMSE",
+                 preProcess = c("center", "scale", "YeoJohnson", "zv"),
+                 tuneGrid = my_grid_reg_xgb)
+
+yhat_reg_xgb = predict(fit_reg_xgb, newdata = test_reg)
+
+Pts_Max <- 1010
+Pts_Won <- round(yhat_reg_xgb * Pts_Max, 0)  # scores
+Pts_Sum <- 2626 
+Points_Won <- round(Pts_Won * Pts_Sum / (sum(Pts_Won)), 0) # scores normalization
+
+test_reg_fin <- cbind(test, Points_Won)
+
+test_reg_fin$Team_Win_Percentage <- 100 * test_reg_fin$Team_Win_Percentage
+test_reg_fin$Games_Played_Percentage <- 100 * test_reg_fin$Games_Played_Percentage
+test_reg_fin$FG_Percentage <- 100 * test_reg_fin$FG_Percentage
+test_reg_fin$FT_Percentage <- 100 * test_reg_fin$FT_Percentage
+```
+
+
+<style>
+p.caption {
+  font-size: 0.8em;
+}
+</style>
+
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 9, fig.height = 6, fig.cap = "Images taken from www.tsn.ca"}
+library(plotly)
+
+test_reg_fin$Player <- factor(as.character(test_reg_fin$Player), levels = as.character(test_reg_fin$Player)[order(test_reg_fin$Points_Won, decreasing = T)])
+test_reg_fin <- test_reg_fin[order(test_reg_fin$Points_Won, decreasing = T),]
+
+test_reg_fin_facce <- test_reg_fin[1:5,]
+
+plot_ly(test_reg_fin_facce, x = ~Points_Won, y = ~Player, type = 'scatter', marker = list(size = 15),
+        hoverlabel = list(font = list(size = 13)), hoverinfo = "x",
+        text = ~paste("Previsione punteggio:", Points_Won)) %>%
+  layout(title = "Prediction of Voting Results",
+         xaxis = list(side = "bottom", title = "Score", showticklabels = T, titlefont = list(size = 16), tickfont = list(size = 12), showgrid = T, fixedrange = T), yaxis = list(title = "", tickfont = list(size = 14),showgrid = T , fixedrange = T),
+         images = list(list(source = base64enc::dataURI(file = "Giannis.png"),
+                            xref="x",yref = "paper", x = 483,y = 0.16,sizex = 30,sizey = 30),
+                       list(source = base64enc::dataURI(file = "Harden.png"),
+                            xref="x",yref = "paper", x = 457,y = 0.37,sizex = 30,sizey = 30),
+                       list(source = base64enc::dataURI(file = "Jokic.png"),
+                            xref="x",yref = "paper", x = 309,y = 0.58,sizex = 30,sizey = 30),
+                       list(source = base64enc::dataURI(file = "Davis.png"),
+                            xref="x",yref = "paper", x = 286,y = 0.82,sizex = 32,sizey = 32),
+                       list(source = base64enc::dataURI(file = "Kawhi.png"),
+                            xref="x",yref = "paper", x = 197,y = 1.00,sizex = 29,sizey = 29))) %>%
+  config(displayModeBar = F)
+
+
+```
+
+
+<br>
+The following bar chart, on the  other hand, provides a more general idea of the results: it shows the top 10 players ordered by the predicted score they will get in the voting.
+
+
+```{r, echog = FALSE, warning = FALSE, message = FALSE, fig.width = 9, fig.height = 6}
+test_reg_fin_plot <- test_reg_fin[1:10,]
+
+annotations <- list()
+for (i in 1:length(test_reg_fin_plot$Points_Won)) {
+  annotations[[i]] <- list(x = test_reg_fin$Player[[i]],
+                           y = test_reg_fin$Points_Won[[i]],
+                           text = test_reg_fin_plot$Points_Won[[i]],
+                           font = list(size = 15),
+                           yanchor = 'bottom',
+                           showarrow = F)
+}
+
+plot_ly(test_reg_fin_plot, x = ~Player, y = ~Points_Won, type = 'bar', hoverlabel = list(font = list(size = 13)), text = ~paste("Team Win %:", Team_Win_Percentage, "<br>Points:", Points_per_Game, "<br>Rebounds:", Rebounds_per_Game, "<br>Assists:", Assists_per_Game, "<br>TS%:", TS_Percentage), hoverinfo = "text", marker = list(color = c('rgb(255,215,0)', 'rgb(192,192,192)', 'rgb(205,127,50)', 'rgb(158,202,225)', 'rgb(158,202,225)', 'rgb(158,202,225)', 'rgb(158,202,225)', 'rgb(158,202,225)', 'rgb(158,202,225)', 'rgb(158,202,225)'), line = list(color = c('rgb(210,105,30)', 'rgb(105,105,105)', 'rgb(139,69,19)', 'rgb(8,48,107)', 'rgb(8,48,107)', 'rgb(8,48,107)', 'rgb(8,48,107)', 'rgb(8,48,107)', 'rgb(8,48,107)', 'rgb(8,48,107)'), width = 1.5))) %>%
+  layout(title = "", xaxis = list(title = "", tickfont = list(size = 16), fixedrange = T), yaxis = list(title = "Score", tickfont = list(size = 13), titlefont = list(size = 17),showgrid = F, fixedrange = T), annotations = annotations) %>%
+  config(displayModeBar = F)
+```
+
+At the moment it seems to be a two-way race between Giannis Antetokounmpo and James Harden. Anthony Davis, who is probably having the best season from a statistical point of view, is penalized by the performance of his team. 
+
+For those interested in the full results, the following table indicates, together with the main stats, the predicted scores for each of those players who, according to the prediction, will receive at least one vote at the end of the season.
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+library(DT)
+
+test_tab <- test_reg_fin[-c(19,20,21,22), -c(2,3,5,8,9,10,14,15,16,17,18,19,20,21,22,23,24,29,30)]
+test_tab$Age <- NULL
+
+col_names <- c('Win %' = 2, 'Games %' = 3, 'Points' = 4, 'Rebounds' = 5, 'Assists' = 6, 'TS%' = 7,'WS/48' = 9, 'Predicted Score' = 11)
+
+datatable(test_tab, class = "cell-border nowrap stripe", rownames = F, colnames = col_names, escape = T, fillContainer = F, options = list(pageLength = 10, autowidth = F, columnDefs = list(list(className = 'dt-center', targets = '_all')))) %>% 
+  formatStyle(columns = c("Player", "Predicted Score"), fontWeight = 'bold')
+``` 
+
+
+
+## Conclusion
+
+The model predicts that Giannis Antetokounmpo will be the NBA MVP for the 2018-19 season; moreover, the analysis showed that the factors most considered by the voters are:
+
+* advanced stats (especially recently);
+* team performance;
+* number of games played.
+
+Finally, an observation: those who follow the NBA may have been surprised by some results, such as the 10th position predicted for Stephen Curry, who is however penalized by having played fewer games than the other players considered. If he doesn't get injured again this season, it is reasonable to think that he will climb several positions. Similarly, if a player (whoever he is) won't play the last 30 games, he probably won't even get a vote. It is worth remembering that, having considered mid-season stats, the results of the analysis are inevitably partial.
