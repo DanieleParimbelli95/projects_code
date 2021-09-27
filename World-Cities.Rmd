@@ -20,13 +20,11 @@ output: html_document
 }
 </style>
 
-
 ```{css, echo = FALSE}
 body {
   background-image: url('https://blenderartists.org/uploads/default/original/4X/7/e/2/7e2d7bea4ac21388c4a96e1371f375c4ce00094b.jpg');
   background-size: 100%;
 }
-
 ```
 
 ```{r setup, include = FALSE}
@@ -52,7 +50,6 @@ df["Country"] = df["Country"].replace({"Korea South" : "South Korea", "Korea Nor
 df.sort_values(by = 'Population', ascending = False, inplace = True)
 
 df_subset = df.iloc[:1000, :]
-
 
 fig = px.scatter_geo(df_subset, lat = "lat", lon = "long", color = "Capital", hover_name = "City", size = "Population", projection = "orthographic",
                      hover_data = {'Country' : False, 'Population' : False, 'lat' : False, 'long' : False, 'Capital' : False}
@@ -80,10 +77,8 @@ fig.update_geos(
 config = dict({'scrollZoom': False, 'displayModeBar': False})
 
 plot(fig, filename = "World-Cities.html", auto_open = False, config = config)
-
 ```
 
 ```{r, echo = FALSE}
 htmltools::includeHTML("World-Cities.html")   # to display in html
-
 ```
