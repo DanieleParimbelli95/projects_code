@@ -38,7 +38,7 @@ val_generator = valid_datagen.flow_from_directory(
 
 base = EfficientNetB6(weights = 'imagenet', include_top = False, input_shape = (input_size, input_size, 3))
 
-base.trainable = False   # keeping weights of the pre-trained network
+base.trainable = False   # keeping the weights of the pre-trained network
 
 inputs = keras.Input(shape = (input_size, input_size, 3))
 x = base(inputs, training = False)
