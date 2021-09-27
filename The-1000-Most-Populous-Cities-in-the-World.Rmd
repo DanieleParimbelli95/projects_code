@@ -1,0 +1,84 @@
+---
+title: "**The 1000 Most Populous Cities in the World**"
+author: "Daniele Parimbelli"
+output: html_document
+---
+
+<style>
+.title {
+    color: yellow;
+    text-align: center;
+}
+</style>
+
+<style>
+.author {
+    color: yellow;
+    text-align: center;
+    font-family: Brush Script MT;
+    font-size: 22px;
+}
+</style>
+
+```{css, echo = FALSE}
+body {
+  background-image: url('https://blenderartists.org/uploads/default/original/4X/7/e/2/7e2d7bea4ac21388c4a96e1371f375c4ce00094b.jpg');
+  background-size: 100%;
+}
+```
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{python, echo = FALSE, warning = FALSE, results = 'hide'}
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.offline import plot
+import plotly.express as px
+
+df = pd.read_csv('.../world_cities.csv', sep = ",")
+
+df['capital'][(df['capital'] == 2) | (df['capital'] == 3)] = 0
+df['capital'][df['capital'] == 0] = "No"
+df['capital'][df['capital'] == 1] = "Yes"
+
+df.rename(columns = {"name" : "City", "country.etc" : "Country", "pop" : "Population", "capital" : "Capital"}, inplace = True)
+
+df["Country"] = df["Country"].replace({"Korea South" : "South Korea", "Korea North" : "North Korea"})
+
+df.sort_values(by = 'Population', ascending = False, inplace = True)
+
+df_subset = df.iloc[:1000, :]
+
+fig = px.scatter_geo(df_subset, lat = "lat", lon = "long", color = "Capital", hover_name = "City", size = "Population", projection = "orthographic",
+                     hover_data = {'Country' : False, 'Population' : False, 'lat' : False, 'long' : False, 'Capital' : False}
+                     size_max = 6, opacity = 0.9, height = 616, title = "", custom_data = ['City', 'Country', 'Capital', 'Population'],
+                     color_discrete_map = {'Yes': 'orange', 'No': 'orange'})
+                     
+fig['data'][0]['showlegend'] = False  
+fig['data'][1]['showlegend'] = False
+
+fig.update_layout(legend_title_text = '', legend = dict(y = 0.9, x = 0.75, font = dict(size = 14)),
+                  title_x = 0.5, paper_bgcolor = 'rgba(0,0,0,0)', geo = dict(bgcolor = 'rgba(0,0,0,0)'))
+                  
+fig.update_traces(hovertemplate = "<b>%{customdata[0]} </b><br><br>" + "Country: %{customdata[1]}<br>" + "Capital: %{customdata[2]}<br>" + "Population: %{customdata[3]:,}<br>" + "<extra></extra>")
+
+fig.update_geos(
+    visible = False, resolution = 110,
+    showcoastlines = False, coastlinecolor = "RebeccaPurple",
+    showland = True, landcolor = "yellowgreen",
+    showocean = True, oceancolor = "royalblue",
+    showlakes = True, lakecolor = "royalblue",
+    showrivers = False, rivercolor = "lightblue",
+    showcountries = False, countrycolor = "RebeccaPurple"
+)
+
+config = dict({'scrollZoom': False, 'displayModeBar': False})
+
+plot(fig, filename = "World-Cities.html", auto_open = False, config = config)
+```
+
+```{r, echo = FALSE}
+htmltools::includeHTML("World-Cities.html")   # to display in html
+```
