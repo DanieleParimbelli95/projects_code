@@ -246,15 +246,15 @@ plot_ly(test_reg_fin_facce, x = ~Points_Won, y = ~Player, type = 'scatter', mark
   layout(title = "Prediction of Voting Results",
          xaxis = list(side = "bottom", title = "Score", showticklabels = T, titlefont = list(size = 16), tickfont = list(size = 12), showgrid = T, fixedrange = T), yaxis = list(title = "", tickfont = list(size = 14),showgrid = T , fixedrange = T),
          images = list(list(source = base64enc::dataURI(file = "Giannis.png"),
-                            xref="x",yref = "paper", x = 483,y = 0.16,sizex = 30,sizey = 30),
+                            xref="x", yref = "paper", x = 483, y = 0.16, sizex = 30, sizey = 30),
                        list(source = base64enc::dataURI(file = "Harden.png"),
-                            xref="x",yref = "paper", x = 457,y = 0.37,sizex = 30,sizey = 30),
+                            xref="x", yref = "paper", x = 457, y = 0.37, sizex = 30, sizey = 30),
                        list(source = base64enc::dataURI(file = "Jokic.png"),
-                            xref="x",yref = "paper", x = 309,y = 0.58,sizex = 30,sizey = 30),
+                            xref="x", yref = "paper", x = 309, y = 0.58, sizex = 30, sizey = 30),
                        list(source = base64enc::dataURI(file = "Davis.png"),
-                            xref="x",yref = "paper", x = 286,y = 0.82,sizex = 32,sizey = 32),
+                            xref="x", yref = "paper", x = 286, y = 0.82, sizex = 32, sizey = 32),
                        list(source = base64enc::dataURI(file = "Kawhi.png"),
-                            xref="x",yref = "paper", x = 197,y = 1.00,sizex = 29,sizey = 29))) %>%
+                            xref="x", yref = "paper", x = 197, y = 1.00, sizex = 29, sizey = 29))) %>%
   config(displayModeBar = F)
 ```
 
