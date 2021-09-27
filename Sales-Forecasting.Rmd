@@ -45,7 +45,6 @@ body {
 
 <div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>
 
-
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.width = 8, fig.align = 'center')
 ```
@@ -89,11 +88,11 @@ For each product line, the forecast graph and the expected numerical values (tog
 **N.B.** Both the graphs and the tables are interactive.
 
 ```{r, echo = FALSE, results = 'hide'}
-dati <- readxl::read_excel(".../Dati.xlsx", sheet = "DataSet")
+df <- readxl::read_excel(".../sales_data.xlsx", sheet = "Dataset")
 
 library(pivottabler)
 pt_sales <- PivotTable$new()
-pt_sales$addData(dati)
+pt_sales$addData(df)
 pt_sales$addColumnDataGroups("ProductLineID", addTotal = FALSE)
 pt_sales$addRowDataGroups("Year", addTotal = FALSE)
 pt_sales$addRowDataGroups("Month", addTotal = FALSE)
@@ -113,19 +112,19 @@ rownames(pivot_sales) <- mgsub(rownames(pivot_sales),
 colnames(pivot_sales) <- paste0('Product Line ', colnames(pivot_sales))
 
 # adding Month column
-dati_sales <- cbind(rownames(pivot_sales), pivot_sales)
-colnames(dati_sales)[1] <- "Month"
-rownames(dati_sales) <- NULL
+sales_data <- cbind(rownames(pivot_sales), pivot_sales)
+colnames(sales_data)[1] <- "Month"
+rownames(sales_data) <- NULL
 
 # adding "-01" to Month in order to convert the column as date 
-dati_sales[, "Month"] <- paste(dati_sales[, "Month"], "-01", sep = "")
-dati_sales[, "Month"] <- as.Date(dati_sales[, "Month"])
+sales_data[, "Month"] <- paste(sales_data[, "Month"], "-01", sep = "")
+sales_data[, "Month"] <- as.Date(sales_data[, "Month"])
 
-dati_sales <- as.data.frame(dati_sales)
+sales_data <- as.data.frame(sales_data)
 
 
 library(forecast)
-past_sales = dati_sales[1 : (nrow(dati_sales)),]
+past_sales = sales_data[1 : (nrow(sales_data)),]
 future_sales = as.data.frame(matrix(NA, nrow = 12, ncol = 1))
 
 library(lubridate)
@@ -136,9 +135,9 @@ future_sales$Month <- seq(past_sales$Month[nrow(past_sales)] %m+% months(1), pas
 
 interactive_line_plots <- function (col) {
   
-tspast_sales <- ts(past_sales[, col], start = c(min( as.integer( unique(format(dati_sales$Month, "%Y")) ) ), 1), end = c(max( as.integer( unique(format(dati_sales$Month, "%Y")) ) ), 12), frequency = 12) 
+ts_past_sales <- ts(past_sales[, col], start = c(min( as.integer( unique(format(sales_data$Month, "%Y")) ) ), 1), end = c(max( as.integer( unique(format(sales_data$Month, "%Y")) ) ), 12), frequency = 12) 
 
-model_sales = ets(tspast_sales, allow.multiplicative.trend = F)
+model_sales = ets(ts_past_sales, allow.multiplicative.trend = F)
 
 forecast_sales = forecast(model_sales, 12, PI = T)
   
@@ -196,16 +195,15 @@ forecast_sales = forecast(model_sales, 12, PI = T)
   p <- add_trace(p, line = trace3$line, mode = trace3$mode, name = trace3$name, type = trace3$type, x = trace3$x, y = trace3$y, xaxis = trace3$xaxis, yaxis = trace3$yaxis, hovertemplate = "(%{x}; %{y})<extra></extra>")
   p <- layout(p, title = layout$title, xaxis = layout$xaxis, yaxis = layout$yaxis, legend = layout$legend)
   p
-  
 }
 
 
 interactive_tables <- function (col) {
   
 # the beginning of the time series is the first year in the data (2015), the end is the last one (2020)
-tspast_sales_tab <- ts(past_sales[, col], start = c(min( as.integer( unique(format(dati_sales$Month, "%Y")) ) ), 1), end = c(max( as.integer( unique(format(dati_sales$Month, "%Y")) ) ), 12), frequency = 12) 
+ts_past_sales_tab <- ts(past_sales[, col], start = c(min( as.integer( unique(format(sales_data$Month, "%Y")) ) ), 1), end = c(max( as.integer( unique(format(sales_data$Month, "%Y")) ) ), 12), frequency = 12) 
 
-model_sales_tab <- ets(tspast_sales_tab, allow.multiplicative.trend = F)
+model_sales_tab <- ets(ts_past_sales_tab, allow.multiplicative.trend = F)
 
 forecast_sales_tab <- forecast(model_sales_tab, 12, PI = T)
 
@@ -222,7 +220,6 @@ tab$Date <- NULL
 tab[13, 3:7] <- colSums(tab[, 3:7])
 tab[, 3:7] <- format(round(tab[, 3:7], 0), nsmall = 0, big.mark = ",")
 
-
 col_names = c('Forecast' = 4, 'Lower 80% PI' = 5, 'Upper 80% PI' = 6, 'Lower 95% PI' = 7, 'Upper 95% PI' = 8)
 
 library(DT)
@@ -232,9 +229,7 @@ datatable(tab, width = '93%', class = "cell-border nowrap stripe", rownames = T,
   formatStyle(0, target = "row", fontWeight = styleEqual(13, "bold"))  
 
 }
-
 ```
-
 
 ```{r, echo = FALSE}
 library(plotly)
@@ -252,7 +247,7 @@ template <- c(
   )
 
 plots <- lapply(
-  unique(colnames(dati_sales)[-1]), 
+  unique(colnames(sales_data)[-1]), 
   function(col) knitr::knit_expand(text = template)
 )
 ```
