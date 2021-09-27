@@ -68,8 +68,7 @@ if url != '':
                 paragraphs_all = paragraphs_all + paragraphs[x].text
             else:
                 paragraphs_all = paragraphs_all + paragraphs[x].text + ". "
-         
-         
+                  
         allthecontent = ""
         
         allthecontent = str(title) + ". " + str(description) + " " + str(paragraphs_all) 
@@ -104,6 +103,5 @@ if url != '':
         pred = result['labels'][0]
         
         return title, pred
-    
-    
+     
     st.write('**Title: **', classify_from_url()[0], ' | **Predicted Subject: **', classify_from_url()[1])
