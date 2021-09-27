@@ -134,7 +134,7 @@ future_sales$Month <- seq(past_sales$Month[nrow(past_sales)] %m+% months(1), pas
 
 interactive_line_plots <- function (col) {
   
-ts_past_sales <- ts(past_sales[, col], start = c(min( as.integer( unique(format(sales_data$Month, "%Y")) ) ), 1), end = c(max( as.integer( unique(format(sales_data$Month, "%Y")) ) ), 12), frequency = 12) 
+ts_past_sales <- ts(past_sales[, col], start = c(min(as.integer(unique(format(sales_data$Month, "%Y")) ) ), 1), end = c(max( as.integer( unique(format(sales_data$Month, "%Y")))), 12), frequency = 12) 
 
 model_sales = ets(ts_past_sales, allow.multiplicative.trend = F)
 
@@ -201,7 +201,7 @@ forecast_sales = forecast(model_sales, 12, PI = T)
 interactive_tables <- function (col) {
   
 # the beginning of the time series is the first year in the data (2015), the end is the last one (2020)
-ts_past_sales_tab <- ts(past_sales[, col], start = c(min( as.integer( unique(format(sales_data$Month, "%Y")) ) ), 1), end = c(max( as.integer( unique(format(sales_data$Month, "%Y")) ) ), 12), frequency = 12) 
+ts_past_sales_tab <- ts(past_sales[, col], start = c(min(as.integer(unique(format(sales_data$Month, "%Y")))), 1), end = c(max(as.integer(unique(format(sales_data$Month, "%Y")))), 12), frequency = 12) 
 
 model_sales_tab <- ets(ts_past_sales_tab, allow.multiplicative.trend = F)
 
