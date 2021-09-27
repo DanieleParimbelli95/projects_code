@@ -172,6 +172,7 @@ The following animated scatterplot shows that in recent years superstars have be
 
 <br>
 
+
 ## Results
 
 The variable importance estimation for the final model produced very reasonable results: respectively, PER, team win percentage, BPM, WS/48, percentage of games played and points per game were the most useful variables in the prediction. In this case, the main thing to point out is how much two variables that do not concern the individual performance of players are considered by voters: team results and number of games played. Furthermore, once again advanced stats (PER, WS/48, BPM) prove to be more useful than “traditional” ones (points, rebounds, assists).
@@ -293,7 +294,6 @@ col_names <- c('Win %' = 2, 'Games %' = 3, 'Points' = 4, 'Rebounds' = 5, 'Assist
 datatable(test_tab, class = "cell-border nowrap stripe", rownames = F, colnames = col_names, escape = T, fillContainer = F, options = list(pageLength = 10, autowidth = F, columnDefs = list(list(className = 'dt-center', targets = '_all')))) %>% 
   formatStyle(columns = c("Player", "Predicted Score"), fontWeight = 'bold')
 ``` 
-
 
 
 ## Conclusion
