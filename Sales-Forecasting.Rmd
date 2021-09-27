@@ -1,0 +1,271 @@
+---
+title: "**Sales Forecasting**"
+author: "Daniele Parimbelli"
+output:
+  html_document:
+    self_contained: false
+    theme: spacelab
+    toc: true
+    toc_float: true
+---
+
+<style>
+h1.title{
+    text-align: center;
+}
+</style>
+
+<style>
+.author {
+    font-family: Brush Script MT;
+    font-size: 22px;
+    text-align: center;
+
+}
+</style>
+
+<style>
+h2 {
+    font-size: 24px;
+}
+</style>
+
+<style>
+body {
+  text-align: justify;
+  font-size: 15.05px;
+}
+</style>
+
+<style>
+.html-widget {
+    margin: auto;
+}
+</style>
+
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>
+
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.width = 8, fig.align = 'center')
+```
+
+<br/>
+**N.B.** The following is a simplified (and anonymized) version of the real project.
+
+
+## Context
+
+Sales Forecasting refers to estimating future sales and is a crucial business process. Accurate sales forecasts allow companies to make smarter decisions about, among other things: budgeting, hiring, production and goal-setting.
+
+
+## Data
+
+The data provided by the client has monthly granularity and refers to the sales recorded in the 2015-2020 period. Since the company's budget is drafted at the product line level, it was decided to use this aggregation for the forecasts.
+
+
+## Goal
+
+The goal is to develop a model capable of automatically forecasting the quantities sold for each of the client's product lines. The main purpose is therefore to make the forecasting process more efficient, not to analyze the different product lines individually.
+
+The forecasts will also form the basis of the sales budget and they will thus help speed up the whole budgeting process, which currently takes the company several months. 
+
+
+## Models 
+
+Attempts have been made with ARIMA and ETS models.
+
+To select which model class to use, a train-test split was implemented. The models were trained considering the months from January 2015 to December 2019, while the months of 2020 were used to compare the forecasts made by the models with those made manually by the company. 
+
+For both cases (ARIMA and ETS), an automatic procedure was created to select the best parameters (that is, the best model) for each of the time series considered.
+
+In the end it was decided to lean towards the ETS models because, in addition to being faster, they allowed to obtain (on average) a lower error on the test set. Therefore, for each product line, the specific best ETS model was used to forecast the sales for the 12 months of 2021. 
+
+
+## Results {.tabset .tabset-fade .tabset-pills}
+
+For each product line, the forecast graph and the expected numerical values (together with the 80% and 95% prediction intervals) are shown below.
+
+**N.B.** Both the graphs and the tables are interactive.
+
+```{r, echo = FALSE, results = 'hide'}
+dati <- readxl::read_excel(".../Dati.xlsx", sheet = "DataSet")
+
+library(pivottabler)
+pt_sales <- PivotTable$new()
+pt_sales$addData(dati)
+pt_sales$addColumnDataGroups("ProductLineID", addTotal = FALSE)
+pt_sales$addRowDataGroups("Year", addTotal = FALSE)
+pt_sales$addRowDataGroups("Month", addTotal = FALSE)
+pt_sales$defineCalculation(calculationName = "Sales", summariseExpression = "Sales_Qty") 
+pt_sales$evaluatePivot()
+pivot_sales <- pt_sales$asDataFrame(separator = " | ") 
+
+rownames(pivot_sales) <- gsub( " | ", "-", rownames(pivot_sales), fixed = T )
+# fixed = T because "|" is a special character
+
+library(textclean)
+rownames(pivot_sales) <- mgsub(rownames(pivot_sales),
+                              c("-1$", "-2$", "-3$", "-4$", "-5$", "-6$", "-7$", "-8$", "-9$"),
+                              c("-01","-02","-03","-04","-05","-06","-07","-08","-09"),
+                              fixed = F) # fixed = F to find the pattern inside the string as well
+
+colnames(pivot_sales) <- paste0('Product Line ', colnames(pivot_sales))
+
+# adding Month column
+dati_sales <- cbind(rownames(pivot_sales), pivot_sales)
+colnames(dati_sales)[1] <- "Month"
+rownames(dati_sales) <- NULL
+
+# adding "-01" to Month in order to convert the column as date 
+dati_sales[, "Month"] <- paste(dati_sales[, "Month"], "-01", sep = "")
+dati_sales[, "Month"] <- as.Date(dati_sales[, "Month"])
+
+dati_sales <- as.data.frame(dati_sales)
+
+
+library(forecast)
+past_sales = dati_sales[1 : (nrow(dati_sales)),]
+future_sales = as.data.frame(matrix(NA, nrow = 12, ncol = 1))
+
+library(lubridate)
+# year after the last year in the data (2021 in this case), i.e. the sequence
+# of values from the last available month + 1 to the last available month + 12
+future_sales$Month <- seq(past_sales$Month[nrow(past_sales)] %m+% months(1), past_sales$Month[nrow(past_sales)] %m+% months(12), by = "months")
+
+
+interactive_line_plots <- function (col) {
+  
+tspast_sales <- ts(past_sales[, col], start = c(min( as.integer( unique(format(dati_sales$Month, "%Y")) ) ), 1), end = c(max( as.integer( unique(format(dati_sales$Month, "%Y")) ) ), 12), frequency = 12) 
+
+model_sales = ets(tspast_sales, allow.multiplicative.trend = F)
+
+forecast_sales = forecast(model_sales, 12, PI = T)
+  
+  library(plotly)
+  trace1 <- list(
+    line = list(color = "black", fillcolor = "black"), 
+    mode = "lines", 
+    name = "Sales", 
+    type = "scatter", 
+    x = as.Date(past_sales$Month, format = "%Y-%m-%d"), 
+    y = past_sales[, col], 
+    xaxis = "x", 
+    yaxis = "y"
+  )
+  trace2 <- list(
+    fill = "toself", 
+    line = list(color = "red", fillcolor = "red"), 
+    mode = "lines", 
+    name = "95% Prediction Interval", 
+    type = "scatter", 
+    x = c(as.Date(future_sales$Month, format = "%Y-%m-%d"), tail(as.Date(future_sales$Month, format = "%Y-%m-%d"), 1), sort(as.Date(future_sales$Month, format = "%Y-%m-%d"), decreasing = T)), 
+    y = c(forecast_sales$lower[, 2], tail(forecast_sales$lower[, 2], 1), rev(forecast_sales$upper[, 2])), 
+    xaxis = "x", 
+    yaxis = "y", 
+    hoveron = "points"
+  )
+  trace3 <- list(
+    line = list(color = "darkred", fillcolor = "darkred"), 
+    mode = "lines", 
+    name = "Forecast", 
+    type = "scatter", 
+    x = as.Date(future_sales$Month, format = "%Y-%m-%d"), 
+    y = forecast_sales$mean, 
+    xaxis = "x", 
+    yaxis = "y"
+  )
+  data <- list(trace1, trace2, trace3)
+  layout <- list(
+    title = "Sales Forecast",    
+    xaxis = list(
+      title = "", 
+      domain = c(0, 1)
+    ), 
+    yaxis = list(
+      title = "", 
+      domain = c(0, 1),
+      hoverformat = ',.0f'
+    ), 
+    legend = list(orientation = "h", xanchor = "center", x = 0.5)
+  )
+  
+  p <- plot_ly()
+  p <- add_trace(p, line = trace1$line, mode = trace1$mode, name = trace1$name, type = trace1$type, x = trace1$x, y = trace1$y, xaxis = trace1$xaxis, yaxis = trace1$yaxis, hovertemplate = "(%{x}; %{y})<extra></extra>")
+  p <- add_trace(p, fill = trace2$fill, line = trace2$line, mode = trace2$mode, name = trace2$name, type = trace2$type, x = trace2$x, y = trace2$y, xaxis = trace2$xaxis, yaxis = trace2$yaxis, hoveron = trace2$hoveron, hovertemplate = "(%{x}; %{y})<extra></extra>")
+  p <- add_trace(p, line = trace3$line, mode = trace3$mode, name = trace3$name, type = trace3$type, x = trace3$x, y = trace3$y, xaxis = trace3$xaxis, yaxis = trace3$yaxis, hovertemplate = "(%{x}; %{y})<extra></extra>")
+  p <- layout(p, title = layout$title, xaxis = layout$xaxis, yaxis = layout$yaxis, legend = layout$legend)
+  p
+  
+}
+
+
+interactive_tables <- function (col) {
+  
+# the beginning of the time series is the first year in the data (2015), the end is the last one (2020)
+tspast_sales_tab <- ts(past_sales[, col], start = c(min( as.integer( unique(format(dati_sales$Month, "%Y")) ) ), 1), end = c(max( as.integer( unique(format(dati_sales$Month, "%Y")) ) ), 12), frequency = 12) 
+
+model_sales_tab <- ets(tspast_sales_tab, allow.multiplicative.trend = F)
+
+forecast_sales_tab <- forecast(model_sales_tab, 12, PI = T)
+
+tab <- as.data.frame(forecast_sales_tab)
+tab <- cbind(Date = rownames(tab), data.frame(tab, row.names = NULL))
+
+library(zoo)
+Sys.setlocale("LC_TIME", "English")
+tab$Date <- as.Date(as.yearmon(tab$Date))
+tab <- cbind(Year = format(tab$Date, "%Y"), Month = format(tab$Date, "%m"), data.frame(tab, row.names = NULL))
+tab$Year <- as.integer(tab$Year)
+tab$Month <- as.integer(tab$Month)
+tab$Date <- NULL
+tab[13, 3:7] <- colSums(tab[, 3:7])
+tab[, 3:7] <- format(round(tab[, 3:7], 0), nsmall = 0, big.mark = ",")
+
+
+col_names = c('Forecast' = 4, 'Lower 80% PI' = 5, 'Upper 80% PI' = 6, 'Lower 95% PI' = 7, 'Upper 95% PI' = 8)
+
+library(DT)
+datatable(tab, width = '93%', class = "cell-border nowrap stripe", rownames = T, colnames = col_names,
+          caption = htmltools::tags$caption(style = 'caption-side: top; text-align: center; color: black; font-size: 17px', "Forecasted Values"),
+          escape = T, fillContainer = F, options = list(autowidth = T, pageLength = 12, lengthChange = F, info = F, lengthMenu = F, paging = F, searching = F, columnDefs = list(list(className = 'dt-center', targets = '_all'), list(visible = F, targets = 0)))) %>%
+  formatStyle(0, target = "row", fontWeight = styleEqual(13, "bold"))  
+
+}
+
+```
+
+
+```{r, echo = FALSE}
+library(plotly)
+template <- c(
+    "### {{col}}\n",
+    "<br>\n",
+    "```{r, echo = FALSE}\n",
+    "interactive_line_plots('{{col}}')\n",
+    "```\n",
+    "```{r, echo = FALSE}\n",
+    "interactive_tables('{{col}}')\n",
+    "```\n",
+    "<br>\n",
+    "\n"
+  )
+
+plots <- lapply(
+  unique(colnames(dati_sales)[-1]), 
+  function(col) knitr::knit_expand(text = template)
+)
+```
+
+`r knitr::knit(text = unlist(plots))`
+
+
+## Conclusion
+
+By analyzing the historical data of the last 5 years, a sales forecasting model has been produced. This allows to obtain the forecasts in a very short time and to evaluate the results graphically.
+
+A significant advantage is that the same procedure could be applied (and the time required would be pretty much the same) even if the forecasts to be made were many more.
+
+The company has now a tool that also allows to significantly optimize the process of drafting the sales budget.
+
+<br/>
