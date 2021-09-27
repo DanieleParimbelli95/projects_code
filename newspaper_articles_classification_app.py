@@ -59,6 +59,7 @@ if url != '':
         
         paragraphs_all = ""
         paragraphs = soup.find_all('p')
+        
         for x in range (len(paragraphs)):
             if x ==  len(paragraphs) -1:
                 paragraphs_all = paragraphs_all + paragraphs[x].text
