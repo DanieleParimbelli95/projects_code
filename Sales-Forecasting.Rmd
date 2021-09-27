@@ -3,7 +3,6 @@ title: "**Sales Forecasting**"
 author: "Daniele Parimbelli"
 output:
   html_document:
-    self_contained: false
     theme: spacelab
     toc: true
     toc_float: true
@@ -195,6 +194,7 @@ forecast_sales = forecast(model_sales, 12, PI = T)
   p <- add_trace(p, line = trace3$line, mode = trace3$mode, name = trace3$name, type = trace3$type, x = trace3$x, y = trace3$y, xaxis = trace3$xaxis, yaxis = trace3$yaxis, hovertemplate = "(%{x}; %{y})<extra></extra>")
   p <- layout(p, title = layout$title, xaxis = layout$xaxis, yaxis = layout$yaxis, legend = layout$legend)
   p
+  
 }
 
 
