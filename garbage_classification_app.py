@@ -65,20 +65,15 @@ with st.expander("Recognize material from an image file"):
         def classify_from_file():
             
             img = Image.open(uploaded_file).convert('RGB').resize((img_size, img_size))
-    
             img_array = image.img_to_array(img)
             img_to_predict = np.expand_dims(img_array, axis = 0)   
             
             model = load_model()
             
             pred_array = model.predict(img_to_predict)
-    
             pred_label = str(np.argmax(pred_array))
-    
             pred_prob = "{:.2%}".format(np.max(pred_array))
-    
             pred_class_array = np.select([pred_label == '0', pred_label == '1', pred_label == '2', pred_label == '3', pred_label == '4'], ['Cardboard', 'Glass', 'Metal', 'Paper', 'Plastic'])
-                                       
             pred_class = np.array2string(pred_class_array).replace("'", "")
             
             img_to_print = Image.open(uploaded_file).convert('RGB').resize((img_size / 2, img_size / 2))
@@ -109,19 +104,14 @@ with st.expander("Recognize material from an image url"):
         def classify_from_url():
             
             img_array = image.img_to_array(img)  
-            
             img_to_predict = np.expand_dims(img_array, axis = 0)   
             
             model = load_model()
         
             pred_array = model.predict(img_to_predict)
-        
             pred_label = str(np.argmax(pred_array))
-        
             pred_prob = "{:.2%}".format(np.max(pred_array))
-        
             pred_class_array = np.select([pred_label == '0', pred_label == '1', pred_label == '2', pred_label == '3', pred_label == '4'], ['Cardboard', 'Glass', 'Metal', 'Paper', 'Plastic'])
-                                       
             pred_class = np.array2string(pred_class_array).replace("'", "")
             
             img_to_print = Image.open(urlopen(url)).convert('RGB').resize((img_size / 2, img_size / 2))
